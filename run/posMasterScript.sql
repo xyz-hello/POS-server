@@ -25,3 +25,36 @@ INSERT INTO `users` (`username`, `password`) VALUES ('cashier', '5678');
 SET SQL_MODE=@OLD_SQL_MODE;
 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS;
 SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS;
+
+--Addtional
+ALTER TABLE `pos_db`.`users` 
+ADD COLUMN `email` VARCHAR(255) NOT NULL AFTER `password`,
+ADD COLUMN `salt` VARCHAR(255) NOT NULL AFTER `email`,
+ADD COLUMN `user_type` TINYINT(1) NOT NULL AFTER `salt`,
+ADD COLUMN `status` VARCHAR(45) NOT NULL AFTER `user_type`,
+CHANGE COLUMN `id` `id` BIGINT NOT NULL AUTO_INCREMENT ,
+CHANGE COLUMN `username` `username` VARCHAR(255) NOT NULL ,
+CHANGE COLUMN `password` `password` VARCHAR(255) NOT NULL ;
+
+--CUSTOMERS TABLE
+CREATE TABLE `pos_db`.`customers` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT,
+  `name` VARCHAR(255) NOT NULL,
+  `status` VARCHAR(10) NOT NULL DEFAULT 'DELETED',
+  PRIMARY KEY (`id`));
+
+--added system type 
+ALTER TABLE `pos_db`.`customers` 
+ADD COLUMN `System type` VARCHAR(255) NOT NULL AFTER `name`,
+ADD COLUMN `customerscol` VARCHAR(45) NOT NULL AFTER `status`,
+DROP PRIMARY KEY,
+ADD PRIMARY KEY (`id`, `customerscol`);
+;
+
+ALTER TABLE `pos_db`.`customers` 
+CHANGE COLUMN `System type` `SystemType` VARCHAR(255) NOT NULL ;
+
+ALTER TABLE `pos_db`.`customers` 
+CHANGE COLUMN `SystemType` `system_type` VARCHAR(255) NOT NULL ;
+
+

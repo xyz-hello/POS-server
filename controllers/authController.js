@@ -1,31 +1,46 @@
-// controllers/authController.js
-const db = require('../models/db'); // Your mysql connection pool
+import db from '../models/db.js';
+import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
 
-const loginUser = (req, res) => {
+export const login = async (req, res) => {
   const { username, password } = req.body;
 
-  const sql = 'SELECT username, user_type FROM users WHERE username = ? AND password = ?';
-  db.query(sql, [username, password], (err, results) => {
-    if (err) {
-      console.error('❌ Login error:', err);
-      return res.status(500).json({ success: false, message: 'Internal server error' });
+  try {
+    const [rows] = await db.execute('SELECT * FROM users WHERE username = ?', [username]);
+
+    if (rows.length === 0) {
+      return res.status(401).json({ message: 'Invalid credentials' });
     }
 
-    if (results.length > 0) {
-      // Map user_type integer to role string
-      let role = 'user';
-      const userType = results[0].user_type;
+    const user = rows[0];
+    const isMatch = await bcrypt.compare(password, user.password);
 
-      if (userType === 0) role = 'superadmin';
-      else if (userType === 1) role = 'admin';
-
-      return res.json({ success: true, role, message: 'Login success' });
-    } else {
-      return res.status(401).json({ success: false, message: 'Invalid credentials' });
+    if (!isMatch) {
+      return res.status(401).json({ message: 'Invalid credentials (wrong password)' });
     }
-  });
-};
 
-module.exports = {
-  loginUser,
+    const token = jwt.sign(
+      {
+        id: user.id,
+        username: user.username,
+        user_type: user.user_type,
+        email: user.email,
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: '1h' }
+    );
+
+    res.status(200).json({
+      message: 'Login successful',
+      token,
+      user: {
+        id: user.id,
+        username: user.username,
+        user_type: user.user_type,
+        email: user.email,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Internal Server Error', error: error.message });
+  }
 };

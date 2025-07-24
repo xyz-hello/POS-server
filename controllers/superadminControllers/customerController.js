@@ -62,7 +62,7 @@ export const createCustomer = async (req, res) => {
   if (!name || !system_type || !status) {
     return res.status(400).json({ message: 'Missing required fields.' });
   }
-x
+
   try {
     const [result] = await db.query(
       'INSERT INTO customers (name, system_type, status) VALUES (?, ?, ?)',

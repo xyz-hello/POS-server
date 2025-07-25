@@ -19,11 +19,11 @@ CREATE TABLE `users` (
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
--- Insert default superadmin and admin
-INSERT INTO `users` (`username`, `password`, `email`, `user_type`, `status`)
+-- Insert default superadmin and admin with hashed passwords
+INSERT INTO `users` (`id`, `username`, `password`, `email`, `user_type`, `status`)
 VALUES 
-('superadmin', '@Test12345', 'superadmin@example.com', 0, 'ACTIVE'),
-('admin', '@Test12345', 'admin@example.com', 1, 'ACTIVE');
+(1, 'superadmin', '$2b$10$wJoHQ2bLnfNl0hAy2xXgyeI55/hrSRJz5PKspzBtM0X8XzSruFzpC', 'superadmin@example.com', 0, 'ACTIVE'),
+(2, 'admin', '$2b$10$0hOUmygiVGBHTsh3iTa78OBM1nY6dLYt9QCnHEVHDPPA/7ahcEc7O', 'admin@example.com', 1, 'ACTIVE');
 
 -- CUSTOMERS TABLE (cleaned without customerscol)
 DROP TABLE IF EXISTS `customers`;

@@ -3,15 +3,17 @@ import {
   getCustomers,
   deleteCustomer,
   updateCustomer,
-  createCustomer, // ✅ NEW
+  createCustomer,
+  updateCustomerStatus,
 } from '../../controllers/superadminControllers/customerController.js';
 import { authenticateToken } from '../../middleware/authMiddleware.js';
 
 const router = express.Router();
 
-router.get('/', authenticateToken, getCustomers);
-router.post('/', authenticateToken, createCustomer); // ✅ NEW
-router.delete('/:id', authenticateToken, deleteCustomer);
-router.put('/:id', authenticateToken, updateCustomer); // for edit
+router.get('/', authenticateToken, getCustomers);               // Fetch customers
+router.post('/', authenticateToken, createCustomer);            // Create customer
+router.delete('/:id', authenticateToken, deleteCustomer);       // Delete customer
+router.put('/:id', authenticateToken, updateCustomer);          // Update customer
+router.put('/:id/status', authenticateToken, updateCustomerStatus); // Update status
 
 export default router;

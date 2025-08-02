@@ -75,3 +75,21 @@ export const createCustomer = async (req, res) => {
     res.status(500).json({ message: 'Server error while adding customer.' });
   }
 };
+
+//Update customer status (ACTIVE, INACTIVE, DELETED)
+export const updateCustomerStatus = async (req, res) => {
+  const { id } = req.params;
+  const { status } = req.body;
+
+  try {
+    await db.query(
+      'UPDATE customers SET status = ? WHERE id = ?',
+      [status, id]
+    );
+    res.status(200).json({ message: 'Customer status updated' });
+  } catch (error) {
+    console.error('Error updating customer status:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+

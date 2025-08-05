@@ -35,6 +35,14 @@ CREATE TABLE `customers` (
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
+-- Add customer_id column and foreign key to users table
+ALTER TABLE `users`
+  ADD COLUMN `customer_id` BIGINT DEFAULT NULL,
+  ADD CONSTRAINT `fk_users_customer_id`
+    FOREIGN KEY (`customer_id`) REFERENCES `customers` (`id`)
+    ON DELETE SET NULL;
+
+
 -- Final SQL mode reset
 SET SQL_MODE=@OLD_SQL_MODE;
 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS;

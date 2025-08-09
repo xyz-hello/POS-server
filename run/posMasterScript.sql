@@ -43,6 +43,12 @@ ALTER TABLE `users`
     ON DELETE SET NULL;
 
 
+INSERT INTO users (username, password, email, user_type, status)
+VALUES
+('cashier1', '$2b$10$4unxJWxA0wdYCK7ViT9R6e5LJ9ONqLQTZMQ9mrhhmIUK3PP1TS1nS', 'cashier1@example.com', 2, 'ACTIVE'), --@test12345
+('cashier2', '$2b$10$4unxJWxA0wdYCK7ViT9R6e5LJ9ONqLQTZMQ9mrhhmIUK3PP1TS1nS',  'cashier2@example.com', 2, 'ACTIVE'); --@test12345
+
+
 -- Final SQL mode reset
 SET SQL_MODE=@OLD_SQL_MODE;
 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS;

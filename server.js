@@ -1,22 +1,24 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-
 import authRoutes from './routes/auth.js'; // Login route
 import customerRoutes from './routes/superadminRoutes/customerroutes.js';
+import adminUserRoutes from './routes/adminRoutes/userRoutes.js';
+
 
 dotenv.config(); // Load .env config
 
-const app = express(); // ✅ Initialize app before using it
+const app = express(); // Initialize app before using it
 
 app.use(cors());
 app.use(express.json()); // Parse JSON bodies
 
-// ✅ Mount your routes after middleware setup
+// Mount your routes after middleware setup
 app.use('/api/auth', authRoutes);
 app.use('/api/superadmin/customers', customerRoutes);
+app.use('/api/admin/users', adminUserRoutes);
 
-// ✅ Start server
+// Start server
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);

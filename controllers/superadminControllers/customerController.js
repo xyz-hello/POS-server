@@ -15,6 +15,7 @@ export const getCustomers = async (req, res) => {
 // Create a new customer and linked user account
 export const createCustomer = async (req, res) => {
   const { name, system_type, status, email } = req.body;
+  const creatorId = req.user.id;  // <- get the ID of logged-in user (superadmin)
 
   if (!name || !system_type || !status) {
     return res.status(400).json({ message: 'Missing required fields (name, system_type, status).' });
@@ -41,10 +42,10 @@ export const createCustomer = async (req, res) => {
 
     const ADMIN_USER_TYPE = 1;
 
-    // Insert linked user record
+    // Insert linked user record with created_by set to superadmin ID
     await db.query(
-      'INSERT INTO users (email, password, user_type, customer_id, username, status) VALUES (?, ?, ?, ?, ?, ?)',
-      [customerEmail, hashedPassword, ADMIN_USER_TYPE, customerId, username, 'ACTIVE']
+      `INSERT INTO users (email, password, user_type, customer_id, username, status, created_by) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [customerEmail, hashedPassword, ADMIN_USER_TYPE, customerId, username, 'ACTIVE', creatorId]
     );
 
     res.status(201).json({
@@ -58,6 +59,7 @@ export const createCustomer = async (req, res) => {
     res.status(500).json({ message: 'Server error while creating customer.' });
   }
 };
+
 
 // Update customer details
 export const updateCustomer = async (req, res) => {

@@ -48,6 +48,11 @@ ALTER TABLE `users`
   ADD CONSTRAINT `fk_users_created_by`
     FOREIGN KEY (`created_by`) REFERENCES `users` (`id`)
     ON DELETE SET NULL;
+    
+UPDATE users
+SET created_by = 1
+WHERE user_type = 1 AND created_by IS NULL;
+
 
 -- Final SQL mode reset
 SET SQL_MODE=@OLD_SQL_MODE;

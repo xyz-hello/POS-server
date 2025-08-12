@@ -16,7 +16,6 @@ export const getCustomers = async (req, res) => {
 export const createCustomer = async (req, res) => {
   const { name, system_type, status, email } = req.body;
 
-  // Validate required fields
   if (!name || !system_type || !status) {
     return res.status(400).json({ message: 'Missing required fields (name, system_type, status).' });
   }
@@ -28,7 +27,7 @@ export const createCustomer = async (req, res) => {
       [name, system_type, status]
     );
 
-    const customerId = customerResult.insertId; // Newly inserted customer ID
+    const customerId = customerResult.insertId;
 
     // Generate hashed default password
     const defaultPassword = '@dm1n';
@@ -104,7 +103,7 @@ export const deleteCustomer = async (req, res) => {
   }
 };
 
-// Update customer status (ACTIVE, INACTIVE, DELETED)
+// Update customer status (ACTIVE, INACTIVE, DELETED) and cascade to linked users
 export const updateCustomerStatus = async (req, res) => {
   const { id } = req.params;
   const { status } = req.body;
@@ -113,19 +112,40 @@ export const updateCustomerStatus = async (req, res) => {
     return res.status(400).json({ message: 'Status is required.' });
   }
 
+  // Get connection for transaction
+  const connection = await db.getConnection();
+
   try {
-    const [result] = await db.query(
+    await connection.beginTransaction();
+
+    // Update customer status
+    const [customerResult] = await connection.query(
       'UPDATE customers SET status = ? WHERE id = ?',
       [status, id]
     );
 
-    if (result.affectedRows === 0) {
+    if (customerResult.affectedRows === 0) {
+      await connection.rollback();
       return res.status(404).json({ message: 'Customer not found.' });
     }
 
-    res.status(200).json({ message: 'Customer status updated successfully.' });
+    // Update linked users' statuses
+    const [userResult] = await connection.query(
+      'UPDATE users SET status = ? WHERE customer_id = ?',
+      [status, id]
+    );
+
+    await connection.commit();
+
+    res.status(200).json({
+      message: 'Customer and linked users status updated successfully.',
+      usersUpdated: userResult.affectedRows,
+    });
   } catch (error) {
+    await connection.rollback();
     console.error('Error updating customer status:', error.message);
     res.status(500).json({ message: 'Internal server error while updating status.' });
+  } finally {
+    connection.release();
   }
 };

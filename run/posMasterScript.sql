@@ -42,12 +42,12 @@ ALTER TABLE `users`
     FOREIGN KEY (`customer_id`) REFERENCES `customers` (`id`)
     ON DELETE SET NULL;
 
-
-INSERT INTO users (username, password, email, user_type, status)
-VALUES
-('cashier1', '$2b$10$4unxJWxA0wdYCK7ViT9R6e5LJ9ONqLQTZMQ9mrhhmIUK3PP1TS1nS', 'cashier1@example.com', 2, 'ACTIVE'), -- @test12345
-('cashier2', '$2b$10$4unxJWxA0wdYCK7ViT9R6e5LJ9ONqLQTZMQ9mrhhmIUK3PP1TS1nS',  'cashier2@example.com', 2, 'ACTIVE'); -- @test12345
-
+-- Add created_by column and foreign key to users table
+ALTER TABLE `users`
+  ADD COLUMN `created_by` BIGINT DEFAULT NULL,
+  ADD CONSTRAINT `fk_users_created_by`
+    FOREIGN KEY (`created_by`) REFERENCES `users` (`id`)
+    ON DELETE SET NULL;
 
 -- Final SQL mode reset
 SET SQL_MODE=@OLD_SQL_MODE;

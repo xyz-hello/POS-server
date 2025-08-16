@@ -1,7 +1,11 @@
 import db from '../../models/db.js';
 import bcrypt from 'bcrypt';
 
-// Get all customers
+// ===================
+// Customer Controllers
+// ===================
+
+// GET all customers
 export const getCustomers = async (req, res) => {
   try {
     const [customers] = await db.query('SELECT * FROM customers');
@@ -12,41 +16,37 @@ export const getCustomers = async (req, res) => {
   }
 };
 
-// Create a new customer and linked user account
+// CREATE a new customer with linked user
 export const createCustomer = async (req, res) => {
   const { name, system_type, status, email } = req.body;
-  const creatorId = req.user.id;  // <- get the ID of logged-in user (superadmin)
+  const creatorId = req.user.id;
 
   if (!name || !system_type || !status) {
     return res.status(400).json({ message: 'Missing required fields (name, system_type, status).' });
   }
 
   try {
-    // Insert customer into customers table
+    // Insert customer
     const [customerResult] = await db.query(
       'INSERT INTO customers (name, system_type, status) VALUES (?, ?, ?)',
       [name, system_type, status]
     );
-
     const customerId = customerResult.insertId;
 
-    // Generate hashed default password
-    const defaultPassword = '@dm1n';
-    const hashedPassword = await bcrypt.hash(defaultPassword, 10);
-
-    // Use provided email or fallback
-    const customerEmail = email || `customer${customerId}@example.com`;
-
-    // Generate username (e.g. "customername123")
+    // Create linked user
+    const hashedPassword = await bcrypt.hash('@dm1n', 10);
     const username = name.toLowerCase().replace(/\s+/g, '') + customerId;
-
+    const customerEmail = email || `customer${customerId}@example.com`;
     const ADMIN_USER_TYPE = 1;
 
-    // Insert linked user record with created_by set to superadmin ID
     await db.query(
-      `INSERT INTO users (email, password, user_type, customer_id, username, status, created_by) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO users (email, password, user_type, customer_id, username, status, created_by) 
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
       [customerEmail, hashedPassword, ADMIN_USER_TYPE, customerId, username, 'ACTIVE', creatorId]
     );
+
+    // Action-level log
+    console.log(`Customer created: ID=${customerId}, name=${name}, by user=${creatorId}`);
 
     res.status(201).json({
       message: 'Customer and linked user created successfully.',
@@ -60,8 +60,7 @@ export const createCustomer = async (req, res) => {
   }
 };
 
-
-// Update customer details
+// UPDATE customer details
 export const updateCustomer = async (req, res) => {
   const { id } = req.params;
   const { name, system_type, status } = req.body;
@@ -80,6 +79,8 @@ export const updateCustomer = async (req, res) => {
       return res.status(404).json({ message: 'Customer not found.' });
     }
 
+    console.log(`Customer updated: ID=${id}, by user=${req.user.id}`);
+
     res.status(200).json({ message: 'Customer updated successfully.' });
   } catch (err) {
     console.error('Error updating customer:', err.message);
@@ -87,7 +88,7 @@ export const updateCustomer = async (req, res) => {
   }
 };
 
-// Delete a customer
+// DELETE customer
 export const deleteCustomer = async (req, res) => {
   const { id } = req.params;
 
@@ -98,6 +99,8 @@ export const deleteCustomer = async (req, res) => {
       return res.status(404).json({ message: 'Customer not found.' });
     }
 
+    console.log(`Customer deleted: ID=${id}, by user=${req.user.id}`);
+
     res.status(200).json({ message: 'Customer deleted successfully.' });
   } catch (err) {
     console.error('Error deleting customer:', err.message);
@@ -105,7 +108,7 @@ export const deleteCustomer = async (req, res) => {
   }
 };
 
-// Update customer status (ACTIVE, INACTIVE, DELETED) and cascade to linked users
+// UPDATE customer status and linked users
 export const updateCustomerStatus = async (req, res) => {
   const { id } = req.params;
   const { status } = req.body;
@@ -114,13 +117,12 @@ export const updateCustomerStatus = async (req, res) => {
     return res.status(400).json({ message: 'Status is required.' });
   }
 
-  // Get connection for transaction
   const connection = await db.getConnection();
 
   try {
     await connection.beginTransaction();
 
-    // Update customer status
+    // Update customer
     const [customerResult] = await connection.query(
       'UPDATE customers SET status = ? WHERE id = ?',
       [status, id]
@@ -131,13 +133,15 @@ export const updateCustomerStatus = async (req, res) => {
       return res.status(404).json({ message: 'Customer not found.' });
     }
 
-    // Update linked users' statuses
+    // Update linked users
     const [userResult] = await connection.query(
       'UPDATE users SET status = ? WHERE customer_id = ?',
       [status, id]
     );
 
     await connection.commit();
+
+    console.log(`Customer status updated: ID=${id}, status=${status}, by user=${req.user.id}, users updated=${userResult.affectedRows}`);
 
     res.status(200).json({
       message: 'Customer and linked users status updated successfully.',

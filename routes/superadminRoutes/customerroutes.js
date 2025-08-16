@@ -7,13 +7,18 @@ import {
   updateCustomerStatus,
 } from '../../controllers/superadminControllers/customerController.js';
 import { authenticateToken } from '../../middleware/authMiddleware.js';
+import { requestLogger } from '../../middleware/Logger.js';
 
 const router = express.Router();
 
-router.get('/', authenticateToken, getCustomers);                      // Get all customers
-router.post('/', authenticateToken, createCustomer);                   // Create customer + user
-router.delete('/:id', authenticateToken, deleteCustomer);              // Soft-delete or real delete
-router.put('/:id', authenticateToken, updateCustomer);                 // Update customer fields
-router.put('/:id/status', authenticateToken, updateCustomerStatus);    // Change status (ACTIVE/INACTIVE/DELETED)
+// Apply authentication and logging to all protected routes
+router.use(authenticateToken, requestLogger);
+
+// Public-like routes (if any) can also use logger
+router.get('/', getCustomers);                      // Get all customers
+router.post('/', createCustomer);                   // Create customer + user
+router.delete('/:id', deleteCustomer);              // Delete customer
+router.put('/:id', updateCustomer);                 // Update customer fields
+router.put('/:id/status', updateCustomerStatus);    // Change status (ACTIVE/INACTIVE/DELETED)
 
 export default router;

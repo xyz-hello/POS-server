@@ -1,49 +1,36 @@
 import express from 'express';
-import db from '../../models/db.js';
 import {
+    checkUsernameAvailability,
+    checkEmailAvailability,
     getUsers,
     createUser,
     updateUser,
     deleteUser,
+    updateUserStatus,
 } from '../../controllers/adminControllers/UserController.js';
 import { authenticateToken } from '../../middleware/authMiddleware.js';
+import { requestLogger } from '../../middleware/Logger.js';
 
 const router = express.Router();
 
-// Public routes: username/email availability check
-router.get('/check-username', async (req, res) => {
-    const { username } = req.query;
-    if (!username) return res.status(400).json({ message: 'Username is required' });
+// ===================
+// Public routes (no auth)
+// ===================
+router.get('/check-username', requestLogger, checkUsernameAvailability);
+router.get('/check-email', requestLogger, checkEmailAvailability);
 
-    try {
-        const [rows] = await db.query('SELECT id FROM users WHERE username = ?', [username]);
-        res.json({ exists: rows.length > 0 });
-    } catch (error) {
-        console.error('Error checking username:', error);
-        res.status(500).json({ message: 'Server error' });
-    }
-});
+// ===================
+// Protected routes
+// ===================
+router.use(authenticateToken); // attach req.user first
+router.use(requestLogger);     // then log with actual user
 
-router.get('/check-email', async (req, res) => {
-    const { email } = req.query;
-    if (!email) return res.status(400).json({ message: 'Email is required' });
-
-    try {
-        const [rows] = await db.query('SELECT id FROM users WHERE email = ?', [email]);
-        res.json({ exists: rows.length > 0 });
-    } catch (error) {
-        console.error('Error checking email:', error);
-        res.status(500).json({ message: 'Server error' });
-    }
-});
-
-// Protect all routes below with authentication
-router.use(authenticateToken);
-
-// CRUD routes
-router.get('/', getUsers);
-router.post('/', createUser);
+router.get('/', getUsers); //get all users (under ?)
+router.post('/', createUser); //create a user
 router.put('/:id', updateUser);
 router.delete('/:id', deleteUser);
+router.put('/:id/status', updateUserStatus); //change status to inactive/active
+
+
 
 export default router;

@@ -34,7 +34,7 @@ export const login = async (req, res) => {
       return res.status(401).json({ message: 'Invalid credentials.' });
     }
 
-    // Use the constant from USER_TYPES object here!
+    // Use the constant from USER_TYPES object here
     if (user.user_type !== USER_TYPES.SUPERADMIN) {
       if (!user.customer_id) {
         return res.status(400).json({ message: 'User is not linked to a customer account.' });

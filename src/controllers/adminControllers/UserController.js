@@ -12,7 +12,7 @@ const roleMap = {
   SuperAdmin: 0,
   Admin: 1,
   Cashier: 2,
-  Manager: 3,
+  Baker: 3,
 };
 
 // ===================
@@ -56,7 +56,7 @@ export const getUsers = async (req, res) => {
 
     if (req.user.user_type !== roleMap.SuperAdmin) {
       whereClause.customer_id = req.user.customer_id;
-      whereClause.user_type = [roleMap.Cashier, roleMap.Manager];
+      whereClause.user_type = [roleMap.Cashier, roleMap.Baker];
     }
 
     const users = await User.findAll({

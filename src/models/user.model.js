@@ -1,7 +1,7 @@
 import { DataTypes, Model } from "sequelize";
 import sequelize from "../config/db.sequelize.config.js";
 
-class User extends Model {}
+class User extends Model { }
 
 User.init(
   {
@@ -26,7 +26,7 @@ User.init(
     user_type: {
       type: DataTypes.TINYINT,
       allowNull: false,
-      comment: "0=SuperAdmin, 1=Admin, 2=Cashier, 3=Manager",
+      comment: "0=SuperAdmin, 1=Admin, 2=Cashier, 3=Baker"
     },
     customer_id: {
       type: DataTypes.BIGINT,

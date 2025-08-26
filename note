@@ -1,0 +1,28 @@
+                 ┌─────────────┐
+                 │ Login Form  │
+                 └─────┬───────┘
+                       │
+             User enters username & password
+                       │
+                       ▼
+                ┌───────────────┐
+                │ Backend Auth  │
+                │ (Check user)  │
+                └─────┬─────────┘
+        ┌───────────────┴───────────────┐
+        │                               │
+        ▼                               ▼
+   User exists?                       Invalid?
+        │                               │
+        │                               ▼
+        │                          Show error
+        ▼
+  Check user_type
+        │
+        ├───────────────┬───────────────┬───────────────┐
+        ▼               ▼               ▼               ▼
+   Cashier           Baker         Supervisor        Admin
+        │               │               │               │
+        │               │               │               │
+    POS Dashboard   Production/Queue   Admin Dashboard   Admin Dashboard
+   (Sales & Payment)  (Orders prep)   (Reports, Users, Inventory)

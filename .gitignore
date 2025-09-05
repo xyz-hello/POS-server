@@ -20,3 +20,6 @@ yarn-error.log*
 
 # lock file (do not push to avoid version conflicts)
 package-lock.json
+
+# uploaded images (ignore all files in uploads folder)
+uploads/

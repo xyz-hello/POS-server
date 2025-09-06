@@ -9,7 +9,7 @@ import authRoutes from "./routes/auth.route.js";
 import customerRoutes from "./routes/superadminRoutes/customer.routes.js";
 import adminUserRoutes from "./routes/adminRoutes/user.routes.js";
 import productRoutes from "./routes/adminRoutes/product.routes.js";
-// Removed inventoryRoutes
+import inventoryRoutes from "./routes/adminRoutes/inventory.routes.js";
 
 // Models + DB connection
 import { sequelize } from "./models/index.js";
@@ -33,7 +33,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/superadmin/customers", customerRoutes);
 app.use("/api/admin/users", adminUserRoutes);
 app.use("/api/admin/products", productRoutes);
-// Removed app.use("/api/admin/inventory", inventoryRoutes);
+app.use("/api/admin/inventory", inventoryRoutes); // added inventory routes
 
 // ===============================
 // Global error handler
@@ -53,8 +53,8 @@ const PORT = process.env.PORT || 4000;
     await sequelize.authenticate();
     console.log("✅ Database connected...");
 
-    // Only sync models without altering schema automatically
-    await sequelize.sync(); // safe — does not try to alter tables
+    // Sync models safely
+    await sequelize.sync();
     console.log("✅ Models synchronized...");
 
     app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));

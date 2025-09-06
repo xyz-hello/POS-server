@@ -1,4 +1,3 @@
-// routes/admin/productRoutes.js
 import express from "express";
 import {
     createProduct,
@@ -7,12 +6,15 @@ import {
     updateProduct,
 } from "../../controllers/adminControllers/productController.js";
 import upload from "../../middleware/uploadMiddleware.js";
+import { authenticateToken, authorizeRole } from "../../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-// ---------------- Routes ----------------
+// ---------------- Protect all routes ----------------
+router.use(authenticateToken); // require JWT
+router.use(authorizeRole(["admin"])); // only admin can access (superadmin sees separately)
 
-// Fetch all products (with inventory info)
+// Fetch all products (Admin sees only their own)
 router.get("/", getProducts);
 
 // Add new product (with optional image)

@@ -1,4 +1,3 @@
-// backend/models/Product.js
 import { DataTypes } from "sequelize";
 import sequelize from "../config/db.sequelize.config.js";
 
@@ -11,11 +10,11 @@ const Product = sequelize.define("Product", {
         type: DataTypes.TEXT,
     },
     price: {
-        type: DataTypes.DECIMAL(10, 2), // stored as DECIMAL
+        type: DataTypes.DECIMAL(10, 2),
         allowNull: false,
         get() {
             const rawValue = this.getDataValue("price");
-            return rawValue === null ? null : Number(rawValue); // always return as number
+            return rawValue === null ? null : Number(rawValue);
         },
     },
     unit_type: {
@@ -28,6 +27,13 @@ const Product = sequelize.define("Product", {
     image_url: {
         type: DataTypes.STRING,
     },
+    customer_id: {              // link product to customer
+        type: DataTypes.INTEGER,
+        allowNull: false,
+    },
+}, {
+    tableName: "Products",
+    timestamps: true,
 });
 
 export default Product;

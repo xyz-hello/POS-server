@@ -1,129 +1,124 @@
+// filepath: src/controllers/adminControllers/productController.js
 import { Product, Inventory } from "../../models/index.js";
 import { v4 as uuidv4 } from "uuid";
-import path from "path";
 
-// ---------------- Helper: generate product code ----------------
+// ---------------- Helper ----------------
 function generateProductCode(name) {
     const first3 = name.slice(0, 3).toUpperCase();
     const date = new Date().toISOString().slice(0, 10).replace(/-/g, "");
     return `${first3}-${date}-${uuidv4().slice(0, 4)}`;
 }
 
-// ---------------- Helper: get full image URL ----------------
-function getFullImageUrl(req, filePath) {
-    if (!filePath) return null;
-    // Use basename to avoid sending full server path
-    return `${req.protocol}://${req.get("host")}/uploads/${path.basename(filePath)}`;
-}
-
-// ---------------- GET /api/admin/products ----------------
+// ---------------- Get all products ----------------
 export const getProducts = async (req, res) => {
     try {
+        const whereClause =
+            req.user.user_type === "superadmin"
+                ? {}
+                : { customer_id: req.user.customer_id };
+
         const products = await Product.findAll({
-            include: [Inventory],
+            where: whereClause,
+            include: [{ model: Inventory, as: "Inventory" }],
+            order: [["createdAt", "DESC"]],
         });
 
-        // Map products to include full image URLs
-        const productsWithUrl = products.map((p) => ({
-            ...p.toJSON(),
-            image: getFullImageUrl(req, p.image_url),
-        }));
-
-        res.json(productsWithUrl);
+        res.json(products);
     } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: "Server error fetching products" });
+        console.error("Get products error:", err);
+        res.status(500).json({ message: "Failed to fetch products." });
     }
 };
 
-// ---------------- POST /api/admin/products ----------------
+// ---------------- Create product ----------------
 export const createProduct = async (req, res) => {
-    const t = await Product.sequelize.transaction();
     try {
-        const { name, description, price, unit_type } = req.body;
-        if (!name || !price || !unit_type) throw new Error("Missing required fields");
+        const { name, price, unit_type, description, initialQuantity } = req.body;
 
-        const productCode = generateProductCode(name);
+        // Only admins must have customer_id
+        if (req.user.user_type === "admin" && !req.user.customer_id) {
+            return res
+                .status(400)
+                .json({ message: "Admin is not linked to a customer." });
+        }
 
-        // Create product with optional image
-        const product = await Product.create(
-            {
-                product_code: productCode,
-                name,
-                description,
-                price,
-                unit_type,
-                image_url: req.file ? req.file.path : null,
-            },
-            { transaction: t }
-        );
+        const product = await Product.create({
+            name,
+            price,
+            unit_type,
+            description,
+            image_url: req.file ? req.file.filename : null,
+            product_code: generateProductCode(name),
+            customer_id: req.user.user_type === "admin" ? req.user.customer_id : null,
+        });
 
-        // Initialize inventory
-        await Inventory.create({ product_id: product.id, quantity: 0 }, { transaction: t });
+        if (initialQuantity !== undefined) {
+            await Inventory.create({
+                product_id: product.id,
+                quantity: Number(initialQuantity),
+            });
+        }
 
-        await t.commit();
-
-        // Return product with full image URL
-        const result = { ...product.toJSON(), image: getFullImageUrl(req, product.image_url) };
-        res.status(201).json({ message: "Product created successfully", product: result });
+        res.status(201).json({ message: "Product created", product });
     } catch (err) {
-        await t.rollback();
-        console.error(err);
-        res.status(500).json({ error: err.message || "Server error creating product" });
+        console.error("Create product error:", err);
+        res.status(500).json({ message: "Failed to create product." });
     }
 };
 
-// ---------------- PUT /api/admin/products/:id ----------------
+// ---------------- Update product ----------------
 export const updateProduct = async (req, res) => {
-    const { id } = req.params;
     try {
-        const product = await Product.findByPk(id);
-        if (!product) return res.status(404).json({ error: "Product not found" });
+        const { id } = req.params;
 
-        const { name, description, price, unit_type } = req.body;
+        const whereClause =
+            req.user.user_type === "superadmin"
+                ? { id }
+                : { id, customer_id: req.user.customer_id };
 
-        product.name = name ?? product.name;
-        product.description = description ?? product.description;
-        product.price = price ?? product.price;
-        product.unit_type = unit_type ?? product.unit_type;
+        const product = await Product.findOne({ where: whereClause });
 
-        if (req.file?.path) product.image_url = req.file.path;
+        if (!product)
+            return res.status(404).json({ message: "Product not found or access denied." });
 
-        await product.save();
+        const { name, price, unit_type, description } = req.body;
+        const image_url = req.file ? req.file.filename : product.image_url;
 
-        // Return product with full image URL
-        const result = { ...product.toJSON(), image: getFullImageUrl(req, product.image_url) };
-        res.json({ message: "Product updated successfully", product: result });
+        await product.update({ name, price, unit_type, description, image_url });
+        res.json({ message: "Product updated", product });
     } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: "Server error updating product" });
+        console.error("Update product error:", err);
+        res.status(500).json({ message: "Failed to update product." });
     }
 };
 
-// ---------------- PATCH /api/admin/products/:productId/inventory ----------------
+// ---------------- Update inventory ----------------
 export const updateInventory = async (req, res) => {
     try {
         const { productId } = req.params;
-        const { action, amount } = req.body;
+        const { quantityChange } = req.body;
 
-        if (!["increment", "decrement"].includes(action))
-            return res.status(400).json({ error: "Invalid action" });
+        const whereClause =
+            req.user.user_type === "superadmin"
+                ? { id: productId }
+                : { id: productId, customer_id: req.user.customer_id };
 
-        if (!amount || isNaN(amount) || amount <= 0)
-            return res.status(400).json({ error: "Amount must be positive" });
+        const product = await Product.findOne({
+            where: whereClause,
+            include: [{ model: Inventory, as: "Inventory" }],
+        });
 
-        const inventory = await Inventory.findOne({ where: { product_id: productId } });
-        if (!inventory) return res.status(404).json({ error: "Inventory not found" });
+        if (!product || !product.Inventory) {
+            return res.status(404).json({ message: "Product or inventory not found." });
+        }
 
-        inventory.quantity =
-            action === "increment"
-                ? inventory.quantity + Number(amount)
-                : Math.max(inventory.quantity - Number(amount), 0);
+        await product.Inventory.update({
+            quantity: product.Inventory.quantity + Number(quantityChange),
+        });
 
-        await inventory.save();
-        res.json({ message: "Inventory updated", inventory });
+        res.json({ message: "Inventory updated", inventory: product.Inventory });
     } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: "Server error updating inventory" });
+        console.error("Update inventory error:", err);
+        res.status(500).json({ message: "Failed to update inventory." });
     }
 };

@@ -13,7 +13,7 @@ const Inventory = sequelize.define("Inventory", {
 });
 
 // Associations
-Product.hasOne(Inventory, { foreignKey: "product_id", onDelete: "CASCADE" });
-Inventory.belongsTo(Product, { foreignKey: "product_id" });
+Product.hasOne(Inventory, { foreignKey: "product_id", as: "Inventory", onDelete: "CASCADE" });
+Inventory.belongsTo(Product, { foreignKey: "product_id", as: "Product" });
 
 export default Inventory;

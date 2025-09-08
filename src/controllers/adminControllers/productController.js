@@ -12,10 +12,11 @@ function generateProductCode(name) {
 // ---------------- Get all products ----------------
 export const getProducts = async (req, res) => {
     try {
+        // Admin (role = 1) → only see their own products
         const whereClause =
-            req.user.user_type === "superadmin"
-                ? {}
-                : { customer_id: req.user.customer_id };
+            req.user.user_type === 1
+                ? { customer_id: req.user.customer_id }
+                : {};
 
         const products = await Product.findAll({
             where: whereClause,
@@ -35,8 +36,8 @@ export const createProduct = async (req, res) => {
     try {
         const { name, price, unit_type, description, initialQuantity } = req.body;
 
-        // Only admins must have customer_id
-        if (req.user.user_type === "admin" && !req.user.customer_id) {
+        // Admin must always have a customer_id
+        if (req.user.user_type === 1 && !req.user.customer_id) {
             return res
                 .status(400)
                 .json({ message: "Admin is not linked to a customer." });
@@ -49,7 +50,7 @@ export const createProduct = async (req, res) => {
             description,
             image_url: req.file ? req.file.filename : null,
             product_code: generateProductCode(name),
-            customer_id: req.user.user_type === "admin" ? req.user.customer_id : null,
+            customer_id: req.user.user_type === 1 ? req.user.customer_id : null,
         });
 
         if (initialQuantity !== undefined) {
@@ -72,14 +73,17 @@ export const updateProduct = async (req, res) => {
         const { id } = req.params;
 
         const whereClause =
-            req.user.user_type === "superadmin"
-                ? { id }
-                : { id, customer_id: req.user.customer_id };
+            req.user.user_type === 1
+                ? { id, customer_id: req.user.customer_id }
+                : { id };
 
         const product = await Product.findOne({ where: whereClause });
 
-        if (!product)
-            return res.status(404).json({ message: "Product not found or access denied." });
+        if (!product) {
+            return res
+                .status(404)
+                .json({ message: "Product not found or access denied." });
+        }
 
         const { name, price, unit_type, description } = req.body;
         const image_url = req.file ? req.file.filename : product.image_url;
@@ -99,9 +103,9 @@ export const updateInventory = async (req, res) => {
         const { quantityChange } = req.body;
 
         const whereClause =
-            req.user.user_type === "superadmin"
-                ? { id: productId }
-                : { id: productId, customer_id: req.user.customer_id };
+            req.user.user_type === 1
+                ? { id: productId, customer_id: req.user.customer_id }
+                : { id: productId };
 
         const product = await Product.findOne({
             where: whereClause,

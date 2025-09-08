@@ -14,7 +14,7 @@ CREATE TABLE `users` (
   `username` VARCHAR(255) NOT NULL UNIQUE,
   `password` VARCHAR(255) NOT NULL,
   `email` VARCHAR(255) NOT NULL,
-  `user_type` TINYINT(1) NOT NULL, -- 0 = Superadmin, 1 = Admin
+  `user_type` TINYINT(1) NOT NULL, -- 0 = Superadmin, 1 = Admin, 2 = Manager, 3 = Cashier
   `status` VARCHAR(45) NOT NULL DEFAULT 'ACTIVE',
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
@@ -63,3 +63,46 @@ ALTER TABLE `users`
 ADD COLUMN `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 ADD COLUMN `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP;
 
+-- created a tester account
+-- cashier_test pw: @Test12345
+-- manager_test pw: @Test12345
+
+-- Create a test customer
+INSERT INTO customers (name, system_type, status)
+VALUES ('Test Dummy Customer', 'POS', 'ACTIVE');
+
+-- Capture the auto-generated ID
+SET @dummy_customer_id = LAST_INSERT_ID();
+
+-- Hashed password for @Test12345
+SET @hashed_pw = '$2b$12$bQs2LXYVjgRGyDB.ZJTjn.E7FgfIBGx2aMhKN3vqNQCEwD9LnpvCC';
+
+-- Link existing admin to the dummy customer and update password
+UPDATE users
+SET customer_id = @dummy_customer_id,
+    password = @hashed_pw
+WHERE username = 'admin';
+
+--  Create manager_test account (created_by = admin)
+INSERT INTO users (username, password, email, user_type, status, customer_id, created_by)
+VALUES (
+  'manager_test',
+  @hashed_pw,
+  'manager_test@example.com',
+  2,              -- Manager user_type
+  'ACTIVE',
+  @dummy_customer_id,
+  2               -- created_by admin
+);
+
+-- Create cashier_test account (created_by = admin)
+INSERT INTO users (username, password, email, user_type, status, customer_id, created_by)
+VALUES (
+  'cashier_test',
+  @hashed_pw,
+  'cashier_test@example.com',
+  3,              -- Cashier user_type
+  'ACTIVE',
+  @dummy_customer_id,
+  2               -- created_by admin
+);

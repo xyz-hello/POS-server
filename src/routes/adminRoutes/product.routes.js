@@ -1,3 +1,4 @@
+// filepath: src/routes/adminRoutes/productRoutes.js
 import express from "express";
 import {
     createProduct,
@@ -12,18 +13,18 @@ const router = express.Router();
 
 // ---------------- Protect all routes ----------------
 router.use(authenticateToken); // require JWT
-router.use(authorizeRole(["admin"])); // only admin can access (superadmin sees separately)
+router.use(authorizeRole([1])); // allow only Admin (numeric role)
 
-// Fetch all products (Admin sees only their own)
+// Fetch all products
 router.get("/", getProducts);
 
-// Add new product (with optional image)
+// Add new product
 router.post("/", upload.single("image"), createProduct);
 
-// Edit existing product (with optional image)
+// Edit existing product
 router.put("/:id", upload.single("image"), updateProduct);
 
-// Update inventory (increment/decrement)
+// Update inventory
 router.patch("/:productId/inventory", updateInventory);
 
 export default router;

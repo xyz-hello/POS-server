@@ -7,10 +7,9 @@ import { Product, Inventory } from "../../models/index.js";
  */
 export const getInventory = async (req, res) => {
     try {
+        // Admin (role = 1) → see only their customer_id
         const whereClause =
-            req.user.user_type === "superadmin"
-                ? {}
-                : { customer_id: req.user.customer_id };
+            req.user.user_type === 1 ? { customer_id: req.user.customer_id } : {};
 
         const products = await Product.findAll({
             where: whereClause,
@@ -41,11 +40,14 @@ export const updateInventory = async (req, res) => {
         const { productId } = req.params;
         const { quantityChange } = req.body;
 
+        // Admin must match customer_id, superadmin can update any
+        const whereClause =
+            req.user.user_type === 1
+                ? { id: productId, customer_id: req.user.customer_id }
+                : { id: productId };
+
         const product = await Product.findOne({
-            where:
-                req.user.user_type === "superadmin"
-                    ? { id: productId }
-                    : { id: productId, customer_id: req.user.customer_id },
+            where: whereClause,
             include: [{ model: Inventory, as: "Inventory" }],
         });
 
@@ -56,8 +58,10 @@ export const updateInventory = async (req, res) => {
             ? product.Inventory
             : await Inventory.create({ product_id: product.id, quantity: 0 });
 
-        // Update quantity
-        await inventory.update({ quantity: inventory.quantity + Number(quantityChange) });
+        // Update quantity safely
+        await inventory.update({
+            quantity: inventory.quantity + Number(quantityChange),
+        });
 
         res.json({ message: "Inventory updated", inventory });
     } catch (err) {

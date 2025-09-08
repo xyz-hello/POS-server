@@ -1,6 +1,7 @@
 // filepath: src/middleware/authMiddleware.js
 import jwt from 'jsonwebtoken';
-import db from '../config/db.mysql.config.js'; // MySQL2 connection for legacy users table
+import db from '../config/db.mysql.config.js';
+import { USER_TYPES } from '../controllers/authController.js';
 
 /**
  * Authenticate JWT token and attach user info to req.user
@@ -15,8 +16,11 @@ export const authenticateToken = async (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    console.log("Raw JWT token:", token);
+    console.log("Decoded JWT payload:", decoded);
+    console.log("Decoded user ID:", decoded.id);
 
-    // Fetch full user from DB to get customer_id, status, etc.
+    // Fetch fresh user data from DB
     const [rows] = await db.execute(
       'SELECT id, username, email, user_type, customer_id, status FROM users WHERE id = ?',
       [decoded.id]
@@ -32,11 +36,18 @@ export const authenticateToken = async (req, res, next) => {
       return res.status(403).json({ message: 'User account inactive or deleted.' });
     }
 
+    // Map numeric role to string
+    const roleName = Object.keys(USER_TYPES).find(
+      key => USER_TYPES[key] === user.user_type
+    );
+
+    // Attach full user info to request
     req.user = {
       id: user.id,
       username: user.username,
       email: user.email,
-      user_type: user.user_type === 0 ? 'superadmin' : 'admin', // 0=SuperAdmin, 1=Admin
+      user_type: user.user_type, // numeric for checks
+      role: roleName,            // string for readability
       customer_id: user.customer_id,
     };
 
@@ -49,11 +60,12 @@ export const authenticateToken = async (req, res, next) => {
 
 /**
  * Role-based authorization middleware
- * Example: authorizeRole(['superadmin'])
+ * Example: authorizeRole([USER_TYPES.SUPERADMIN, USER_TYPES.ADMIN])
  */
-export const authorizeRole = (allowedRoles) => (req, res, next) => {
+export const authorizeRole = (allowedRoles = []) => (req, res, next) => {
   if (!req.user || !allowedRoles.includes(req.user.user_type)) {
     return res.status(403).json({ message: 'Access denied: insufficient permissions.' });
   }
   next();
 };
+

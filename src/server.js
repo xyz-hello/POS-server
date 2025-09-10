@@ -10,6 +10,7 @@ import customerRoutes from "./routes/superadminRoutes/customer.routes.js";
 import adminUserRoutes from "./routes/adminRoutes/user.routes.js";
 import productRoutes from "./routes/adminRoutes/product.routes.js";
 import inventoryRoutes from "./routes/adminRoutes/inventory.routes.js";
+import posProductRoutes from "./routes/posRoutes/product.routes.js";
 
 // Models + DB connection
 import { sequelize } from "./models/index.js";
@@ -20,20 +21,33 @@ const app = express();
 // ===============================
 // Middleware
 // ===============================
-app.use(cors());
+
+// Enable CORS for React frontend
+app.use(cors({
+  origin: "http://localhost:3000", // React frontend URL
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
+  credentials: true
+}));
+
+// Parse JSON body
 app.use(express.json());
 
-// ---------------- Serve uploaded files ----------------
-app.use("/uploads", express.static(path.join(process.cwd(), "uploads"))); // serve uploads folder
+// Serve uploaded files (make sure this folder exists)
+app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 
 // ===============================
-// Routes
+// POS Routes
+// ===============================
+app.use("/api/pos", posProductRoutes);
+
+// ===============================
+// Other Routes
 // ===============================
 app.use("/api/auth", authRoutes);
 app.use("/api/superadmin/customers", customerRoutes);
 app.use("/api/admin/users", adminUserRoutes);
 app.use("/api/admin/products", productRoutes);
-app.use("/api/admin/inventory", inventoryRoutes); // added inventory routes
+app.use("/api/admin/inventory", inventoryRoutes);
 
 // ===============================
 // Global error handler

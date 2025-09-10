@@ -73,7 +73,7 @@ export const login = async (req, res) => {
         customer_id: user.customer_id || null,
       },
       process.env.JWT_SECRET,
-      { expiresIn: '1h' }
+      { expiresIn: '24hr' }
     );
 
     // Map numeric role to string for frontend readability

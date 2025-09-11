@@ -1,31 +1,37 @@
 import express from "express";
-import pool from "../../config/db.mysql.config.js"; // MySQL2 pool
+import pool from "../../config/db.mysql.config.js";
+import { authenticateToken } from "../../middleware/authMiddleware.js";
 
 const router = express.Router();
 
 // GET /api/pos/products
-router.get("/products", async (req, res) => {
+router.get("/products", authenticateToken, async (req, res) => {
     try {
         const backendUrl = process.env.BACKEND_URL || "http://localhost:4000";
 
+        // Fetch only products that belong to this user's customer_id
         const [rows] = await pool.query(`
-            SELECT 
-              p.name, 
-              p.price, 
-              i.quantity AS stock, 
-              p.image_url AS image, 
-              p.description
-            FROM Products p
-            JOIN Inventories i ON p.id = i.product_id
-            WHERE i.quantity > 0
-            ORDER BY p.name ASC
-        `);
+      SELECT 
+        p.id,
+        p.name,
+        p.price,
+        i.quantity AS stock,
+        p.image_url AS image,
+        p.description
+      FROM Products p
+      JOIN Inventories i ON p.id = i.product_id
+      WHERE i.quantity > 0
+        AND p.customer_id = ?
+      ORDER BY p.name ASC
+    `, [req.user.customer_id]); // filter by owner
 
-        // Transform data for frontend
         const products = rows.map(p => ({
-            ...p,
-            price: Number(p.price) || 0, // ensure numeric
+            id: p.id,
+            name: p.name,
+            price: Number(p.price) || 0,
+            stock: Number(p.stock) || 0,
             image: p.image ? `${backendUrl}/uploads/${p.image}` : null,
+            description: p.description,
         }));
 
         res.json(products);

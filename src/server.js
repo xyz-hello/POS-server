@@ -11,6 +11,8 @@ import adminUserRoutes from "./routes/adminRoutes/user.routes.js";
 import productRoutes from "./routes/adminRoutes/product.routes.js";
 import inventoryRoutes from "./routes/adminRoutes/inventory.routes.js";
 import posProductRoutes from "./routes/posRoutes/product.routes.js";
+import orderRoutes from "./routes/adminRoutes/order.routes.js";
+
 
 // Models + DB connection
 import { sequelize } from "./models/index.js";
@@ -48,6 +50,7 @@ app.use("/api/superadmin/customers", customerRoutes);
 app.use("/api/admin/users", adminUserRoutes);
 app.use("/api/admin/products", productRoutes);
 app.use("/api/admin/inventory", inventoryRoutes);
+app.use("/api/admin/orders", orderRoutes);
 
 // ===============================
 // Global error handler

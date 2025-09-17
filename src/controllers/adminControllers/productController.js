@@ -9,7 +9,7 @@ function generateProductCode(name) {
     return `${first3}-${date}-${uuidv4().slice(0, 4)}`;
 }
 
-// ---------------- Get all products ----------------
+// ---------------- Get all products (with pagination) ----------------
 export const getProducts = async (req, res) => {
     try {
         // Admin (role = 1) → only see their own products
@@ -18,10 +18,17 @@ export const getProducts = async (req, res) => {
                 ? { customer_id: req.user.customer_id }
                 : {};
 
+        // Pagination
+        const limit = parseInt(req.query.limit) || 20; // default 20 items per request
+        const page = parseInt(req.query.page) || 1;    // default page 1
+        const offset = (page - 1) * limit;
+
         const products = await Product.findAll({
             where: whereClause,
             include: [{ model: Inventory, as: "Inventory" }],
             order: [["createdAt", "DESC"]],
+            limit,
+            offset,
         });
 
         res.json(products);

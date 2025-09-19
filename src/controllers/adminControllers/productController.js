@@ -133,3 +133,36 @@ export const updateInventory = async (req, res) => {
         res.status(500).json({ message: "Failed to update inventory." });
     }
 };
+
+export const deleteProduct = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const whereClause =
+            req.user.user_type === 1
+                ? { id, customer_id: req.user.customer_id }
+                : { id };
+
+        const product = await Product.findOne({
+            where: whereClause,
+            include: [{ model: Inventory, as: "Inventory" }],
+        });
+
+        if (!product) {
+            return res
+                .status(404)
+                .json({ message: "Product not found or access denied." });
+        }
+
+        await product.update({ status: "DELETED" });
+
+        if (product.Inventory) {
+            await product.Inventory.update({ quantity: 0 });
+        }
+
+        res.json({ message: "Product deleted (soft delete)", product });
+    } catch (err) {
+        console.error("Delete product error:", err);
+        res.status(500).json({ message: "Failed to delete product." });
+    }
+};

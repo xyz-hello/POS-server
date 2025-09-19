@@ -5,6 +5,7 @@ import {
     updateInventory,
     getProducts,
     updateProduct,
+    deleteProduct,
 } from "../../controllers/adminControllers/productController.js";
 import upload from "../../middleware/uploadMiddleware.js";
 import { authenticateToken, authorizeRole } from "../../middleware/authMiddleware.js";
@@ -26,5 +27,8 @@ router.put("/:id", upload.single("image"), updateProduct);
 
 // Update inventory
 router.patch("/:productId/inventory", updateInventory);
+
+//delete product
+router.delete("/products/:id", deleteProduct);
 
 export default router;

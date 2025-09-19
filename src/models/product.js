@@ -31,6 +31,10 @@ const Product = sequelize.define("Product", {
         type: DataTypes.INTEGER,
         allowNull: false,
     },
+    status: {
+        type: DataTypes.ENUM("ACTIVE", "DELETED"),
+        defaultValue: "ACTIVE",
+    },
 }, {
     tableName: "Products",
     timestamps: true,

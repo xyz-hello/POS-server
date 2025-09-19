@@ -1,30 +1,38 @@
 // filepath: src/controllers/adminControllers/productController.js
 import { Product, Inventory } from "../../models/index.js";
 import { v4 as uuidv4 } from "uuid";
+import { Op } from "sequelize";
 
 // ---------------- Helper ----------------
+
+// Generate unique product code using name, date, and UUID fragment
 function generateProductCode(name) {
     const first3 = name.slice(0, 3).toUpperCase();
     const date = new Date().toISOString().slice(0, 10).replace(/-/g, "");
     return `${first3}-${date}-${uuidv4().slice(0, 4)}`;
 }
 
-// ---------------- Get all products (with pagination) ----------------
+// Build product where clause based on role
+function buildWhereClause(user, extraConditions = {}) {
+    const baseWhere = { status: { [Op.ne]: "DELETED" }, ...extraConditions };
+
+    // Admin (role = 1) → only see their own products
+    return user.user_type === 1
+        ? { ...baseWhere, customer_id: user.customer_id }
+        : baseWhere;
+}
+
+// ---------------- Controllers ----------------
+
+// Get all products (with pagination)
 export const getProducts = async (req, res) => {
     try {
-        // Admin (role = 1) → only see their own products
-        const whereClause =
-            req.user.user_type === 1
-                ? { customer_id: req.user.customer_id }
-                : {};
-
-        // Pagination
-        const limit = parseInt(req.query.limit) || 20; // default 20 items per request
-        const page = parseInt(req.query.page) || 1;    // default page 1
+        const limit = parseInt(req.query.limit, 10) || 20;
+        const page = parseInt(req.query.page, 10) || 1;
         const offset = (page - 1) * limit;
 
         const products = await Product.findAll({
-            where: whereClause,
+            where: buildWhereClause(req.user),
             include: [{ model: Inventory, as: "Inventory" }],
             order: [["createdAt", "DESC"]],
             limit,
@@ -38,16 +46,13 @@ export const getProducts = async (req, res) => {
     }
 };
 
-// ---------------- Create product ----------------
+// Create product
 export const createProduct = async (req, res) => {
     try {
         const { name, price, unit_type, description, initialQuantity } = req.body;
 
-        // Admin must always have a customer_id
         if (req.user.user_type === 1 && !req.user.customer_id) {
-            return res
-                .status(400)
-                .json({ message: "Admin is not linked to a customer." });
+            return res.status(400).json({ message: "Admin is not linked to a customer." });
         }
 
         const product = await Product.create({
@@ -74,22 +79,14 @@ export const createProduct = async (req, res) => {
     }
 };
 
-// ---------------- Update product ----------------
+// Update product
 export const updateProduct = async (req, res) => {
     try {
         const { id } = req.params;
-
-        const whereClause =
-            req.user.user_type === 1
-                ? { id, customer_id: req.user.customer_id }
-                : { id };
-
-        const product = await Product.findOne({ where: whereClause });
+        const product = await Product.findOne({ where: buildWhereClause(req.user, { id }) });
 
         if (!product) {
-            return res
-                .status(404)
-                .json({ message: "Product not found or access denied." });
+            return res.status(404).json({ message: "Product not found or access denied." });
         }
 
         const { name, price, unit_type, description } = req.body;
@@ -103,19 +100,14 @@ export const updateProduct = async (req, res) => {
     }
 };
 
-// ---------------- Update inventory ----------------
+// Update inventory
 export const updateInventory = async (req, res) => {
     try {
         const { productId } = req.params;
         const { quantityChange } = req.body;
 
-        const whereClause =
-            req.user.user_type === 1
-                ? { id: productId, customer_id: req.user.customer_id }
-                : { id: productId };
-
         const product = await Product.findOne({
-            where: whereClause,
+            where: buildWhereClause(req.user, { id: productId }),
             include: [{ model: Inventory, as: "Inventory" }],
         });
 
@@ -134,24 +126,18 @@ export const updateInventory = async (req, res) => {
     }
 };
 
+// Soft delete product
 export const deleteProduct = async (req, res) => {
     try {
         const { id } = req.params;
 
-        const whereClause =
-            req.user.user_type === 1
-                ? { id, customer_id: req.user.customer_id }
-                : { id };
-
         const product = await Product.findOne({
-            where: whereClause,
+            where: buildWhereClause(req.user, { id }),
             include: [{ model: Inventory, as: "Inventory" }],
         });
 
         if (!product) {
-            return res
-                .status(404)
-                .json({ message: "Product not found or access denied." });
+            return res.status(404).json({ message: "Product not found or access denied." });
         }
 
         await product.update({ status: "DELETED" });

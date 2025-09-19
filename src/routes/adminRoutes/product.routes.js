@@ -28,7 +28,7 @@ router.put("/:id", upload.single("image"), updateProduct);
 // Update inventory
 router.patch("/:productId/inventory", updateInventory);
 
-//delete product
-router.delete("/products/:id", deleteProduct);
+// Delete product (soft delete)
+router.delete("/:id", deleteProduct);
 
 export default router;

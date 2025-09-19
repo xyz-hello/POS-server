@@ -1,15 +1,23 @@
 // filepath: src/controllers/adminControllers/inventoryController.js
 import { Product, Inventory } from "../../models/index.js";
+import { Op } from "sequelize";
 
 /**
  * GET /api/admin/inventory
- * Return all products with their inventory
+ * Return all products with their inventory (excluding deleted)
  */
 export const getInventory = async (req, res) => {
     try {
-        // Admin (role = 1) → see only their customer_id
+        // Build base where clause
         const whereClause =
-            req.user.user_type === 1 ? { customer_id: req.user.customer_id } : {};
+            req.user.user_type === 1
+                ? { customer_id: req.user.customer_id }
+                : {};
+
+        // Only include ACTIVE or INACTIVE products
+        whereClause.status = {
+            [Op.in]: ["ACTIVE", "INACTIVE"],
+        };
 
         const products = await Product.findAll({
             where: whereClause,
@@ -46,12 +54,17 @@ export const updateInventory = async (req, res) => {
                 ? { id: productId, customer_id: req.user.customer_id }
                 : { id: productId };
 
+        // Only allow updates if product is ACTIVE or INACTIVE
+        whereClause.status = {
+            [Op.in]: ["ACTIVE", "INACTIVE"],
+        };
+
         const product = await Product.findOne({
             where: whereClause,
             include: [{ model: Inventory, as: "Inventory" }],
         });
 
-        if (!product) return res.status(404).json({ message: "Product not found." });
+        if (!product) return res.status(404).json({ message: "Product not found or deleted." });
 
         // If inventory doesn’t exist, create it
         const inventory = product.Inventory

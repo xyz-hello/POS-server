@@ -8,8 +8,11 @@ const Order = sequelize.define("Order", {
         unique: true,
     },
     user_id: {
-        type: DataTypes.INTEGER,
+        type: DataTypes.BIGINT, // remove UNSIGNED
         allowNull: false,
+        references: { model: 'users', key: 'id' },
+        onUpdate: 'CASCADE',
+        onDelete: 'CASCADE',
     },
     subtotal: {
         type: DataTypes.DECIMAL(10, 2),

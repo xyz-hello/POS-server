@@ -4,20 +4,17 @@ import { Op } from "sequelize";
 
 /**
  * GET /api/admin/inventory
- * Return all products with their inventory (excluding deleted)
+ * Returns all products with inventory, including image_url
  */
 export const getInventory = async (req, res) => {
     try {
-        // Build base where clause
         const whereClause =
             req.user.user_type === 1
                 ? { customer_id: req.user.customer_id }
                 : {};
 
-        // Only include ACTIVE or INACTIVE products
-        whereClause.status = {
-            [Op.in]: ["ACTIVE", "INACTIVE"],
-        };
+        // Only ACTIVE or INACTIVE products
+        whereClause.status = { [Op.in]: ["ACTIVE", "INACTIVE"] };
 
         const products = await Product.findAll({
             where: whereClause,
@@ -25,11 +22,12 @@ export const getInventory = async (req, res) => {
             order: [["createdAt", "DESC"]],
         });
 
-        // Map products for frontend table
+        // Map products to send necessary fields to frontend
         const data = products.map((p) => ({
             id: p.id,
             product_name: p.name,
             quantity: p.Inventory?.quantity || 0,
+            image_url: p.image_url || null, // include image
         }));
 
         res.json(data);
@@ -48,16 +46,12 @@ export const updateInventory = async (req, res) => {
         const { productId } = req.params;
         const { quantityChange } = req.body;
 
-        // Admin must match customer_id, superadmin can update any
         const whereClause =
             req.user.user_type === 1
                 ? { id: productId, customer_id: req.user.customer_id }
                 : { id: productId };
 
-        // Only allow updates if product is ACTIVE or INACTIVE
-        whereClause.status = {
-            [Op.in]: ["ACTIVE", "INACTIVE"],
-        };
+        whereClause.status = { [Op.in]: ["ACTIVE", "INACTIVE"] };
 
         const product = await Product.findOne({
             where: whereClause,
@@ -66,17 +60,19 @@ export const updateInventory = async (req, res) => {
 
         if (!product) return res.status(404).json({ message: "Product not found or deleted." });
 
-        // If inventory doesn’t exist, create it
         const inventory = product.Inventory
             ? product.Inventory
             : await Inventory.create({ product_id: product.id, quantity: 0 });
 
-        // Update quantity safely
         await inventory.update({
             quantity: inventory.quantity + Number(quantityChange),
         });
 
-        res.json({ message: "Inventory updated", inventory });
+        res.json({
+            message: "Inventory updated",
+            inventory,
+            image_url: product.image_url || null,
+        });
     } catch (err) {
         console.error("Update inventory error:", err);
         res.status(500).json({ message: "Failed to update inventory." });

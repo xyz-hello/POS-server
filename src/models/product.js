@@ -2,13 +2,8 @@ import { DataTypes } from "sequelize";
 import sequelize from "../config/db.sequelize.config.js";
 
 const Product = sequelize.define("Product", {
-    name: {
-        type: DataTypes.STRING,
-        allowNull: false,
-    },
-    description: {
-        type: DataTypes.TEXT,
-    },
+    name: { type: DataTypes.STRING, allowNull: false },
+    description: { type: DataTypes.TEXT },
     price: {
         type: DataTypes.DECIMAL(10, 2),
         allowNull: false,
@@ -17,26 +12,13 @@ const Product = sequelize.define("Product", {
             return rawValue === null ? null : Number(rawValue);
         },
     },
-    unit_type: {
-        type: DataTypes.STRING,
-    },
-    product_code: {
-        type: DataTypes.STRING,
-        unique: true,
-    },
-    image_url: {
-        type: DataTypes.STRING,
-    },
-    customer_id: {              // link product to customer
-        type: DataTypes.INTEGER,
-        allowNull: false,
-    },
-    status: {
-        type: DataTypes.ENUM("ACTIVE", "DELETED"),
-        defaultValue: "ACTIVE",
-    },
+    unit_type: { type: DataTypes.STRING },
+    product_code: { type: DataTypes.STRING, unique: true },
+    image_url: { type: DataTypes.STRING },
+    customer_id: { type: DataTypes.INTEGER, allowNull: false }, // link product to customer
+    status: { type: DataTypes.ENUM("ACTIVE", "DELETED"), defaultValue: "ACTIVE" },
 }, {
-    tableName: "Products",
+    tableName: "products",
     timestamps: true,
 });
 

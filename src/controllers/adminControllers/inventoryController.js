@@ -4,7 +4,7 @@ import { Op } from "sequelize";
 
 /**
  * GET /api/admin/inventory
- * Returns all products with inventory, including image_url
+ * Returns all products with inventory info
  */
 export const getInventory = async (req, res) => {
     try {
@@ -13,21 +13,19 @@ export const getInventory = async (req, res) => {
                 ? { customer_id: req.user.customer_id }
                 : {};
 
-        // Only ACTIVE or INACTIVE products
         whereClause.status = { [Op.in]: ["ACTIVE", "INACTIVE"] };
 
         const products = await Product.findAll({
             where: whereClause,
-            include: [{ model: Inventory, as: "Inventory" }],
+            include: [{ model: Inventory, as: "inventory" }], // ✅ correct alias
             order: [["createdAt", "DESC"]],
         });
 
-        // Map products to send necessary fields to frontend
         const data = products.map((p) => ({
             id: p.id,
             product_name: p.name,
-            quantity: p.Inventory?.quantity || 0,
-            image_url: p.image_url || null, // include image
+            quantity: p.inventory?.quantity || 0,
+            image_url: p.image_url || null,
         }));
 
         res.json(data);
@@ -55,13 +53,13 @@ export const updateInventory = async (req, res) => {
 
         const product = await Product.findOne({
             where: whereClause,
-            include: [{ model: Inventory, as: "Inventory" }],
+            include: [{ model: Inventory, as: "inventory" }], // ✅ correct alias
         });
 
         if (!product) return res.status(404).json({ message: "Product not found or deleted." });
 
-        const inventory = product.Inventory
-            ? product.Inventory
+        const inventory = product.inventory
+            ? product.inventory
             : await Inventory.create({ product_id: product.id, quantity: 0 });
 
         await inventory.update({

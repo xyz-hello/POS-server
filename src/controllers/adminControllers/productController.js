@@ -4,19 +4,14 @@ import { v4 as uuidv4 } from "uuid";
 import { Op } from "sequelize";
 
 // ---------------- Helper ----------------
-
-// Generate unique product code using name, date, and UUID fragment
 function generateProductCode(name) {
     const first3 = name.slice(0, 3).toUpperCase();
     const date = new Date().toISOString().slice(0, 10).replace(/-/g, "");
     return `${first3}-${date}-${uuidv4().slice(0, 4)}`;
 }
 
-// Build product where clause based on role
 function buildWhereClause(user, extraConditions = {}) {
     const baseWhere = { status: { [Op.ne]: "DELETED" }, ...extraConditions };
-
-    // Admin (role = 1) → only see their own products
     return user.user_type === 1
         ? { ...baseWhere, customer_id: user.customer_id }
         : baseWhere;
@@ -24,7 +19,7 @@ function buildWhereClause(user, extraConditions = {}) {
 
 // ---------------- Controllers ----------------
 
-// Get all products (with pagination)
+// Get all products (with inventory)
 export const getProducts = async (req, res) => {
     try {
         const limit = parseInt(req.query.limit, 10) || 20;
@@ -33,7 +28,7 @@ export const getProducts = async (req, res) => {
 
         const products = await Product.findAll({
             where: buildWhereClause(req.user),
-            include: [{ model: Inventory, as: "Inventory" }],
+            include: [{ model: Inventory, as: "inventory" }], // ✅ lowercase alias
             order: [["createdAt", "DESC"]],
             limit,
             offset,
@@ -46,7 +41,7 @@ export const getProducts = async (req, res) => {
     }
 };
 
-// Create product
+// Create product with optional inventory
 export const createProduct = async (req, res) => {
     try {
         const { name, price, unit_type, description, initialQuantity } = req.body;
@@ -85,9 +80,7 @@ export const updateProduct = async (req, res) => {
         const { id } = req.params;
         const product = await Product.findOne({ where: buildWhereClause(req.user, { id }) });
 
-        if (!product) {
-            return res.status(404).json({ message: "Product not found or access denied." });
-        }
+        if (!product) return res.status(404).json({ message: "Product not found or access denied." });
 
         const { name, price, unit_type, description } = req.body;
         const image_url = req.file ? req.file.filename : product.image_url;
@@ -100,7 +93,7 @@ export const updateProduct = async (req, res) => {
     }
 };
 
-// Update inventory
+// Update inventory for a product
 export const updateInventory = async (req, res) => {
     try {
         const { productId } = req.params;
@@ -108,18 +101,20 @@ export const updateInventory = async (req, res) => {
 
         const product = await Product.findOne({
             where: buildWhereClause(req.user, { id: productId }),
-            include: [{ model: Inventory, as: "Inventory" }],
+            include: [{ model: Inventory, as: "inventory" }], // ✅ correct alias
         });
 
-        if (!product || !product.Inventory) {
-            return res.status(404).json({ message: "Product or inventory not found." });
-        }
+        if (!product) return res.status(404).json({ message: "Product not found." });
 
-        await product.Inventory.update({
-            quantity: product.Inventory.quantity + Number(quantityChange),
+        const inventory = product.inventory
+            ? product.inventory
+            : await Inventory.create({ product_id: product.id, quantity: 0 });
+
+        await inventory.update({
+            quantity: inventory.quantity + Number(quantityChange),
         });
 
-        res.json({ message: "Inventory updated", inventory: product.Inventory });
+        res.json({ message: "Inventory updated", inventory });
     } catch (err) {
         console.error("Update inventory error:", err);
         res.status(500).json({ message: "Failed to update inventory." });
@@ -133,18 +128,14 @@ export const deleteProduct = async (req, res) => {
 
         const product = await Product.findOne({
             where: buildWhereClause(req.user, { id }),
-            include: [{ model: Inventory, as: "Inventory" }],
+            include: [{ model: Inventory, as: "inventory" }], // ✅ correct alias
         });
 
-        if (!product) {
-            return res.status(404).json({ message: "Product not found or access denied." });
-        }
+        if (!product) return res.status(404).json({ message: "Product not found or access denied." });
 
         await product.update({ status: "DELETED" });
 
-        if (product.Inventory) {
-            await product.Inventory.update({ quantity: 0 });
-        }
+        if (product.inventory) await product.inventory.update({ quantity: 0 });
 
         res.json({ message: "Product deleted (soft delete)", product });
     } catch (err) {

@@ -72,6 +72,11 @@ export const updateInventory = async (req, res) => {
         }
         await inventory.update({ quantity: newQuantity });
 
+        // Emit socket.io event for real-time update
+        if (req.app && req.app.get && req.app.get("io")) {
+            req.app.get("io").emit("products_updated");
+        }
+
         res.json({
             message: "Inventory updated",
             inventory,

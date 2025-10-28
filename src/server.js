@@ -3,6 +3,8 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import path from "path";
+import http from "http";
+import { Server as SocketIOServer } from "socket.io";
 
 // Routes
 import authRoutes from "./routes/auth.route.js";
@@ -20,6 +22,17 @@ import { sequelize } from "./models/index.js";
 
 dotenv.config();
 const app = express();
+const server = http.createServer(app);
+const io = new SocketIOServer(server, {
+  cors: {
+    origin: "http://localhost:3000",
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
+    credentials: true
+  }
+});
+
+// Make io available globally (for use in controllers)
+app.set("io", io);
 
 // ===============================
 // Middleware
@@ -78,7 +91,7 @@ const PORT = process.env.PORT || 4000;
     await sequelize.sync({ alter: true });
     console.log("✅ Models synchronized (altered)...");
 
-    app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+    server.listen(PORT, () => console.log(`🚀 Server + Socket.IO running on port ${PORT}`));
   } catch (error) {
     console.error("❌ Database connection failed:", error);
     process.exit(1);

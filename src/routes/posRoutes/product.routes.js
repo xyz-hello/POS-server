@@ -10,6 +10,7 @@ router.get("/products", authenticateToken, async (req, res) => {
     const backendUrl = process.env.BACKEND_URL || "http://localhost:4000";
 
     // Fetch all products for this customer, regardless of stock
+
     const [rows] = await pool.query(`
       SELECT 
         p.id,
@@ -17,12 +18,13 @@ router.get("/products", authenticateToken, async (req, res) => {
         p.price,
         i.quantity AS stock,
         p.image_url AS image,
-        p.description
+        p.description,
+        p.status
       FROM Products p
       JOIN Inventories i ON p.id = i.product_id
-      WHERE p.customer_id = ?
+      WHERE p.customer_id = ? AND p.status != 'DELETED'
       ORDER BY p.name ASC
-    `, [req.user.customer_id]); // filter by owner
+    `, [req.user.customer_id]); // filter by owner and not deleted
 
     const products = rows.map(p => ({
       id: p.id,
@@ -31,6 +33,7 @@ router.get("/products", authenticateToken, async (req, res) => {
       stock: Number(p.stock) || 0, // keep stock to show out-of-stock in frontend
       image: p.image ? `${backendUrl}/uploads/${p.image}` : null,
       description: p.description,
+      status: p.status,
     }));
 
     res.json(products);

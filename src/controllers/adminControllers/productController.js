@@ -67,6 +67,9 @@ export const createProduct = async (req, res) => {
             });
         }
 
+        // Emit products_updated event
+        const io = req.app.get("io");
+        if (io) io.emit("products_updated");
         res.status(201).json({ message: "Product created", product });
     } catch (err) {
         console.error("Create product error:", err);
@@ -86,6 +89,9 @@ export const updateProduct = async (req, res) => {
         const image_url = req.file ? req.file.filename : product.image_url;
 
         await product.update({ name, price, unit_type, description, image_url });
+        // Emit products_updated event
+        const io = req.app.get("io");
+        if (io) io.emit("products_updated");
         res.json({ message: "Product updated", product });
     } catch (err) {
         console.error("Update product error:", err);
@@ -137,6 +143,9 @@ export const deleteProduct = async (req, res) => {
 
         if (product.inventory) await product.inventory.update({ quantity: 0 });
 
+        // Emit products_updated event
+        const io = req.app.get("io");
+        if (io) io.emit("products_updated");
         res.json({ message: "Product deleted (soft delete)", product });
     } catch (err) {
         console.error("Delete product error:", err);

@@ -9,16 +9,43 @@ import bcrypt from 'bcrypt';
 export const getCustomers = async (req, res) => {
   try {
     const [customers] = await db.query('SELECT * FROM customers');
-    res.status(200).json(customers);
+    const baseUrl = process.env.BASE_URL || 'http://localhost:4000';
+    const customersWithLogoUrl = customers.map(c => ({
+      ...c,
+      logo: c.logo ? `${baseUrl}/uploads/${c.logo}` : null
+    }));
+    res.status(200).json(customersWithLogoUrl);
   } catch (err) {
     console.error('Error fetching customers:', err.message);
     res.status(500).json({ message: 'Server error while fetching customers.' });
   }
 };
 
+// GET customer by ID
+export const getCustomerById = async (req, res) => {
+  const { id } = req.params;
+  if (!id) {
+    return res.status(400).json({ message: 'Customer ID is required.' });
+  }
+  try {
+    const [rows] = await db.query('SELECT * FROM customers WHERE id = ?', [id]);
+    if (rows.length === 0) {
+      return res.status(404).json({ message: 'Customer not found.' });
+    }
+    const baseUrl = process.env.BASE_URL || 'http://localhost:4000';
+    const customer = rows[0];
+    customer.logo = customer.logo ? `${baseUrl}/uploads/${customer.logo}` : null;
+    res.status(200).json(customer);
+  } catch (err) {
+    console.error('Error fetching customer:', err.message);
+    res.status(500).json({ message: 'Server error while fetching customer.' });
+  }
+};
+
 // CREATE a new customer with linked user
 export const createCustomer = async (req, res) => {
-  const { name, system_type, status, email } = req.body;
+  const { name, system_type, status, email, theme } = req.body;
+  const logo = req.file ? req.file.filename : req.body.logo || null;
   const creatorId = req.user.id;
 
   if (!name || !system_type || !status) {
@@ -28,8 +55,8 @@ export const createCustomer = async (req, res) => {
   try {
     // Insert customer
     const [customerResult] = await db.query(
-      'INSERT INTO customers (name, system_type, status) VALUES (?, ?, ?)',
-      [name, system_type, status]
+      'INSERT INTO customers (name, system_type, status, logo, theme, created_at, updated_at) VALUES (?, ?, ?, ?, ?, NOW(), NOW())',
+      [name, system_type, status, logo || null, theme || 'navy']
     );
     const customerId = customerResult.insertId;
 
@@ -40,8 +67,8 @@ export const createCustomer = async (req, res) => {
     const ADMIN_USER_TYPE = 1;
 
     await db.query(
-      `INSERT INTO users (email, password, user_type, customer_id, username, status, created_by) 
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO users (email, password, user_type, customer_id, username, status, created_by, created_at, updated_at) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
       [customerEmail, hashedPassword, ADMIN_USER_TYPE, customerId, username, 'ACTIVE', creatorId]
     );
 
@@ -50,30 +77,50 @@ export const createCustomer = async (req, res) => {
 
     res.status(201).json({
       message: 'Customer and linked user created successfully.',
-      customer_id: customerId,
-      username,
-      email: customerEmail,
+      customer: {
+        id: customerId,
+        name,
+        system_type,
+        status,
+        logo: logo ? `${process.env.BASE_URL || 'http://localhost:4000'}/uploads/${logo}` : null,
+        theme: theme || 'navy',
+        email: customerEmail,
+        username,
+      }
     });
   } catch (err) {
-    console.error('Error creating customer:', err.message);
-    res.status(500).json({ message: 'Server error while creating customer.' });
+    console.error('Error creating customer:', err);
+    res.status(500).json({ message: 'Server error while creating customer.', error: err.message, stack: err.stack });
   }
 };
 
 // UPDATE customer details
 export const updateCustomer = async (req, res) => {
   const { id } = req.params;
-  const { name, system_type, status } = req.body;
+  if (!req.body) {
+    return res.status(400).json({ message: 'Missing request body.' });
+  }
+  const { name, system_type, status, theme } = req.body;
+  const logo = req.file ? req.file.filename : req.body.logo || undefined;
 
   if (!name || !system_type || !status) {
     return res.status(400).json({ message: 'Missing required fields (name, system_type, status).' });
   }
 
   try {
-    const [result] = await db.query(
-      'UPDATE customers SET name = ?, system_type = ?, status = ? WHERE id = ?',
-      [name, system_type, status, id]
-    );
+    let query = 'UPDATE customers SET name = ?, system_type = ?, status = ?';
+    let params = [name, system_type, status];
+    if (logo !== undefined) {
+      query += ', logo = ?';
+      params.push(logo);
+    }
+    if (theme !== undefined) {
+      query += ', theme = ?';
+      params.push(theme);
+    }
+    query += ' WHERE id = ?';
+    params.push(id);
+    const [result] = await db.query(query, params);
 
     if (result.affectedRows === 0) {
       return res.status(404).json({ message: 'Customer not found.' });

@@ -17,7 +17,7 @@ export const getInventory = async (req, res) => {
 
         const products = await Product.findAll({
             where: whereClause,
-            include: [{ model: Inventory, as: "inventory" }], // ✅ correct alias
+            include: [{ model: Inventory, as: "inventory" }],
             order: [["createdAt", "DESC"]],
         });
 
@@ -53,18 +53,24 @@ export const updateInventory = async (req, res) => {
 
         const product = await Product.findOne({
             where: whereClause,
-            include: [{ model: Inventory, as: "inventory" }], // ✅ correct alias
+            include: [{ model: Inventory, as: "inventory" }],
         });
 
         if (!product) return res.status(404).json({ message: "Product not found or deleted." });
 
         const inventory = product.inventory
             ? product.inventory
-            : await Inventory.create({ product_id: product.id, quantity: 0 });
+            : await Inventory.create({
+                product_id: product.id,
+                quantity: 0,
+                customer_id: product.customer_id // Fix: set customer_id
+            });
 
-        await inventory.update({
-            quantity: inventory.quantity + Number(quantityChange),
-        });
+        const newQuantity = inventory.quantity + Number(quantityChange);
+        if (newQuantity < 0) {
+            return res.status(400).json({ message: "Inventory cannot be negative." });
+        }
+        await inventory.update({ quantity: newQuantity });
 
         res.json({
             message: "Inventory updated",

@@ -1,7 +1,7 @@
 // filepath: src/routes/adminRoutes/order.routes.js
 import express from "express";
-import { createOrder, getOrderById, getOrderAnalytics } from "../../controllers/adminControllers/orderController.js";
-import { authenticateToken } from "../../middleware/authMiddleware.js";
+import { createOrder, getOrderById } from "../../controllers/adminControllers/orderController.js";
+import { authenticateToken } from "../../middleware/authMiddleware.js"; // use the correct export name
 
 const router = express.Router();
 
@@ -9,11 +9,6 @@ const router = express.Router();
 // @desc    Create a new order
 // @access  Private
 router.post("/", authenticateToken, createOrder);
-
-// @route   GET /api/orders/analytics
-// @desc    Get order analytics
-// @access  Private
-router.get("/analytics", authenticateToken, getOrderAnalytics);
 
 // @route   GET /api/orders/:id
 // @desc    Get order details by ID

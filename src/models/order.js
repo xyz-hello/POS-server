@@ -4,6 +4,14 @@ import sequelize from "../config/db.sequelize.config.js";
 const Order = sequelize.define("Order", {
     order_number: { type: DataTypes.STRING, allowNull: false, unique: true },
     user_id: { type: DataTypes.BIGINT, allowNull: false },
+    customer_id: {
+        type: DataTypes.BIGINT,
+        allowNull: false,
+        references: {
+            model: "customers",
+            key: "id",
+        },
+    },
     subtotal: { type: DataTypes.DECIMAL(10, 2), allowNull: false },
     discount: { type: DataTypes.DECIMAL(10, 2), defaultValue: 0 },
     total: { type: DataTypes.DECIMAL(10, 2), allowNull: false },

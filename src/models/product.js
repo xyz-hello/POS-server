@@ -15,8 +15,8 @@ const Product = sequelize.define("Product", {
     unit_type: { type: DataTypes.STRING },
     product_code: { type: DataTypes.STRING, unique: true },
     image_url: { type: DataTypes.STRING },
-    customer_id: { type: DataTypes.INTEGER, allowNull: false }, // link product to customer
-    status: { type: DataTypes.ENUM("ACTIVE", "DELETED"), defaultValue: "ACTIVE" },
+    customer_id: { type: DataTypes.BIGINT, allowNull: false }, // link product to customer
+    status: { type: DataTypes.ENUM("ACTIVE", "INACTIVE", "DELETED"), defaultValue: "ACTIVE" },
 }, {
     tableName: "products",
     timestamps: true,

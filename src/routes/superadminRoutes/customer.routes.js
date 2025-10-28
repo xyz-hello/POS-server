@@ -16,9 +16,13 @@ router.use(authenticateToken, requestLogger);
 
 // Public-like routes (if any) can also use logger
 router.get('/', getCustomers);                      // Get all customers
-router.post('/', createCustomer);                   // Create customer + user
+import multer from 'multer';
+const upload = multer({ dest: 'uploads/' });
+import { getCustomerById } from '../../controllers/superadminControllers/customerController.js';
+router.get('/:id', getCustomerById);                // Get customer by ID
+router.post('/', upload.single('logo'), createCustomer);                   // Create customer + user
 router.delete('/:id', deleteCustomer);              // Delete customer
-router.put('/:id', updateCustomer);                 // Update customer fields
+router.put('/:id', upload.single('logo'), updateCustomer);                 // Update customer fields
 router.put('/:id/status', updateCustomerStatus);    // Change status (ACTIVE/INACTIVE/DELETED)
 
 export default router;

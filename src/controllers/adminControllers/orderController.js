@@ -35,6 +35,8 @@ const formatOrder = (order) => ({
 // ----------------- Create a new order -----------------
 export const createOrder = async (req, res) => {
     const { user_id, cart, payment_method, discount = 0 } = req.body;
+    // Always set customer_id from logged-in user
+    const customer_id = req.user.customer_id;
 
     if (!cart || cart.length === 0) {
         return res.status(400).json({ message: "Cart cannot be empty" });
@@ -50,7 +52,7 @@ export const createOrder = async (req, res) => {
 
         // 1. Create the order
         const order = await Order.create(
-            { order_number, user_id, subtotal, discount, total, payment_method, status: "PAID" },
+            { order_number, user_id, customer_id, subtotal, discount, total, payment_method, status: "PAID" },
             { transaction }
         );
 
@@ -131,5 +133,62 @@ export const getOrderById = async (req, res) => {
     } catch (error) {
         console.error("Fetch order failed:", error);
         return res.status(500).json({ message: "Failed to fetch order", error: error.message });
+    }
+};
+
+// ----------------- Get order analytics -----------------
+export const getOrderAnalytics = async (req, res) => {
+    try {
+        const customerId = req.user.customer_id;
+        // Sales by day (last 30 days)
+        const [salesByDay] = await sequelize.query(`
+            SELECT DATE(createdAt) as date, SUM(total) as totalSales, COUNT(*) as ordersCount
+            FROM orders
+            WHERE status = 'PAID' AND customer_id = ?
+            GROUP BY DATE(createdAt)
+            ORDER BY DATE(createdAt) DESC
+            LIMIT 30
+        `, { replacements: [customerId] });
+
+        // Sales by month (last 12 months)
+        const [salesByMonth] = await sequelize.query(`
+            SELECT YEAR(createdAt) as year, MONTH(createdAt) as month, SUM(total) as totalSales, COUNT(*) as ordersCount
+            FROM orders
+            WHERE status = 'PAID' AND customer_id = ?
+            GROUP BY YEAR(createdAt), MONTH(createdAt)
+            ORDER BY year DESC, month DESC
+            LIMIT 12
+        `, { replacements: [customerId] });
+
+        // Top products (last 30 days)
+        const [topProducts] = await sequelize.query(`
+            SELECT oi.product_id, p.name as product, SUM(oi.qty) as totalQty
+            FROM order_items oi
+            JOIN orders o ON oi.order_id = o.id
+            JOIN products p ON oi.product_id = p.id
+            WHERE o.status = 'PAID' AND o.customer_id = ? AND o.createdAt >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+            GROUP BY oi.product_id, p.name
+            ORDER BY totalQty DESC
+            LIMIT 10
+        `, { replacements: [customerId] });
+
+        // Summary stats
+        const [summary] = await sequelize.query(`
+            SELECT COUNT(*) AS total_orders, SUM(total) AS total_sales, AVG(total) AS avg_order_value
+            FROM orders
+            WHERE status = 'PAID' AND customer_id = ?
+        `, { replacements: [customerId] });
+
+        res.json({
+            salesByDay,
+            salesByMonth,
+            topProducts,
+            total_orders: summary[0].total_orders || 0,
+            total_sales: summary[0].total_sales || 0,
+            avg_order_value: summary[0].avg_order_value || 0,
+        });
+    } catch (err) {
+        console.error("Order analytics error:", err);
+        res.status(500).json({ message: "Failed to fetch analytics", error: err.message });
     }
 };

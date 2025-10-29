@@ -1,7 +1,10 @@
 // ----------------- Get all orders (summary) -----------------
 export const getAllOrders = async (req, res) => {
     try {
+        // Only return orders for the current customer's customer_id
+        const customerId = req.user.customer_id;
         const orders = await Order.findAll({
+            where: { customer_id: customerId },
             attributes: ["id", "order_number", "total", "createdAt", "status", "payment_method"],
             order: [["createdAt", "DESC"]],
         });

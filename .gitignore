@@ -23,3 +23,4 @@ package-lock.json
 
 # uploaded images (ignore all files in uploads folder)
 uploads/
+package-lock.json

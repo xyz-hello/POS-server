@@ -1,3 +1,16 @@
+// ----------------- Get all orders (summary) -----------------
+export const getAllOrders = async (req, res) => {
+    try {
+        const orders = await Order.findAll({
+            attributes: ["id", "order_number", "total", "createdAt", "status", "payment_method"],
+            order: [["createdAt", "DESC"]],
+        });
+        res.json(orders);
+    } catch (error) {
+        console.error("Fetch all orders failed:", error);
+        res.status(500).json({ message: "Failed to fetch orders", error: error.message });
+    }
+};
 // filepath: controllers/adminControllers/orderController.js
 import { Order, OrderItem, Product, Inventory } from "../../models/index.js";
 import sequelize from "../../config/db.sequelize.config.js";

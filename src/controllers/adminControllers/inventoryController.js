@@ -24,6 +24,8 @@ export const getInventory = async (req, res) => {
         const data = products.map((p) => ({
             id: p.id,
             product_name: p.name,
+            description: p.description,
+            price: p.price,
             quantity: p.inventory?.quantity || 0,
             image_url: p.image_url || null,
         }));

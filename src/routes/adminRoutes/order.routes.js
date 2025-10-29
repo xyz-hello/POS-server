@@ -1,9 +1,12 @@
-// filepath: src/routes/adminRoutes/order.routes.js
 import express from "express";
-import { createOrder, getOrderById, getOrderAnalytics } from "../../controllers/adminControllers/orderController.js";
+import { createOrder, getOrderById, getOrderAnalytics, getAllOrders } from "../../controllers/adminControllers/orderController.js";
 import { authenticateToken } from "../../middleware/authMiddleware.js";
 
 const router = express.Router();
+
+// @route   GET /api/orders
+// @desc    Get all orders (summary)
+router.get("/", authenticateToken, getAllOrders);
 
 // @route   POST /api/orders
 // @desc    Create a new order

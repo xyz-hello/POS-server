@@ -13,6 +13,7 @@ import adminUserRoutes from "./routes/adminRoutes/user.routes.js";
 import productRoutes from "./routes/adminRoutes/product.routes.js";
 import inventoryRoutes from "./routes/adminRoutes/inventory.routes.js";
 import posProductRoutes from "./routes/posRoutes/product.routes.js";
+import preReleaseRoutes from "./routes/posRoutes/preRelease.routes.js";
 import orderRoutes from "./routes/adminRoutes/order.routes.js";
 import uploadRoutes from "./routes/superadminRoutes/upload.route.js";
 
@@ -55,6 +56,7 @@ app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 // POS Routes
 // ===============================
 app.use("/api/pos", posProductRoutes);
+app.use("/api/pos", preReleaseRoutes);
 
 // ===============================
 // Other Routes

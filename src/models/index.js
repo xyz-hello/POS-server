@@ -4,6 +4,8 @@ import Product from "./product.js";
 import Inventory from "./inventory.js";
 import Order from "./order.js";
 import OrderItem from "./orderItem.js";
+import PreRelease from "./preRelease.js";
+import PreReleaseItem from "./preReleaseItem.js";
 
 // ----------------- Associations -----------------
 
@@ -23,6 +25,18 @@ OrderItem.belongsTo(Order, { foreignKey: "order_id", as: "order" });
 Product.hasMany(OrderItem, { foreignKey: "product_id", as: "orderItems" });
 OrderItem.belongsTo(Product, { foreignKey: "product_id", as: "product" });
 
+// PreRelease <-> PreReleaseItem (1:N)
+PreRelease.hasMany(PreReleaseItem, { foreignKey: "pre_release_id", as: "items" });
+PreReleaseItem.belongsTo(PreRelease, { foreignKey: "pre_release_id", as: "preRelease" });
+
+// PreReleaseItem <-> Product (N:1)
+Product.hasMany(PreReleaseItem, { foreignKey: "product_id", as: "preReleaseItems" });
+PreReleaseItem.belongsTo(Product, { foreignKey: "product_id", as: "product" });
+
+// PreRelease <-> User (N:1)
+User.hasMany(PreRelease, { foreignKey: "user_id", as: "preReleases" });
+PreRelease.belongsTo(User, { foreignKey: "user_id", as: "user" });
+
 export {
     sequelize,
     User,
@@ -30,4 +44,6 @@ export {
     Inventory,
     Order,
     OrderItem,
+    PreRelease,
+    PreReleaseItem,
 };

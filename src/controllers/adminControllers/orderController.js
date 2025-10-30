@@ -7,8 +7,31 @@ export const getAllOrders = async (req, res) => {
             where: { customer_id: customerId },
             attributes: ["id", "order_number", "total", "createdAt", "status", "payment_method"],
             order: [["createdAt", "DESC"]],
+            include: [
+                {
+                    model: OrderItem,
+                    as: "items",
+                    attributes: ["product_id", "qty"],
+                    include: [
+                        {
+                            model: Product,
+                            as: "product",
+                            attributes: ["name"]
+                        }
+                    ]
+                }
+            ]
         });
-        res.json(orders);
+        // Format orders to include product name and qty in a flat array for each order
+        const formattedOrders = orders.map(order => ({
+            ...order.toJSON(),
+            products: order.items.map(item => ({
+                product_id: item.product_id,
+                name: item.product?.name || null,
+                qty: item.qty
+            }))
+        }));
+        res.json(formattedOrders);
     } catch (error) {
         console.error("Fetch all orders failed:", error);
         res.status(500).json({ message: "Failed to fetch orders", error: error.message });
@@ -40,11 +63,10 @@ const formatOrder = (order) => ({
     payment_method: order.payment_method,
     status: order.status,
     createdAt: order.createdAt,
-    items: order.items.map((item) => ({
+    products: (order.items || []).map((item) => ({
         product_id: item.product_id,
         name: item.product?.name || null,
-        qty: item.qty,
-        price: item.price,
+        qty: item.qty
     })),
 });
 
